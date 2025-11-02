@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class ModelTraierConfig:
+class ModelTrainerConfig:
     artifact_folder=os.path.join(artifact_folder)
     trained_model_path=os.path.join(artifact_folder,"model.pkl")
     expected_accuracy=0.45
@@ -140,80 +140,58 @@ class ModelTrainer:
        
         except Exception as e:
             raise CustomException(e,sys)
-
-
-def initiate_model_trainer(self,train_array,test_array):
-    try:
-        logging.info(f"Splitting training and testing input and target feature")
-
-        x_train,y_train,x_test,y_test=(
-            train_array[:,:-1],
-            train_array[:,-1],
-            test_array[:,:-1],
-            test_array[:,-1],
-        )
-
-
-        logging.info(f"Extracting model config file path")
-
-
-        logging.info(f"Extracting model config file path")
-
-        model_report:dict=self.evaluate_models(X=x_train,y=y_train,models=self.models)
-
-        ## To get best model score from dict
-
-        best_model_score = max(sorted(model_report.values()))
-
-        ## To get best model name from dict
-        best_model_name=list(model_report.keys())[
-            list(model_report.values()).index(best_model_score)
-        ]
-
-
-
-        best_model=self.models[best_model_name]
-
-
-
-        best_model = self.models[best_model_name]
-
-
-
-        best_model = self.finetune_best_model(
-            best_model_name=best_model_name,
-            best_model_object=best_model,
-            X_train=x_train,
-            y_train=y_train
-        )
-
-        best_model.fit(x_train,y_train)
-        y_pred = best_model.predict(x_test)
-        best_model_score = accuracy_score(y_test,y_pred)
-
-        print(f"best model name{best_model_name} and score:{best_model_score}")
-
-
-        if best_model_score < 0.5:
-            raise Exception("No best model found with an accuracy greater than the threshold 0.6")
         
-        logging.info(f"Best found model on both training and testing dataset")
+    def initiate_model_trainer(self, train_array, test_array):
+        try:
+            logging.info(f"Splitting training and testing input and target feature")
 
+            x_train, y_train, x_test, y_test = (
+                train_array[:, :-1],
+                train_array[:, -1],
+                test_array[:, :-1],
+                test_array[:, -1],
+            )
 
-        logging.info(
-            f"Saving model at path:{self.model_trainer_config.trained_model_path}"
-        )
+            logging.info(f"Evaluating models")
+            model_report = self.evaluate_model(X=x_train, y=y_train, models=self.models)
 
+            best_model_score = max(sorted(model_report.values()))
+            best_model_name = list(model_report.keys())[
+                list(model_report.values()).index(best_model_score)
+            ]
+            best_model = self.models[best_model_name]
 
-        os.makedirs(os.path.dirname(self.model_trainer_config.trained_model_path),exist_ok=True)
+            best_model = self.finetune_best_model(
+                best_model_name=best_model_name,
+                best_model_object=best_model,
+                X_train=x_train,
+                y_train=y_train,
+            )
 
-        self.utils.save_object(
-            file_path=self.model_trainer_config.trained_model_path,
-            obj=best_model
-        )
+            best_model.fit(x_train, y_train)
+            y_pred = best_model.predict(x_test)
+            best_model_score = accuracy_score(y_test, y_pred)
 
-        return self.model_trainer_config.trained_model_path
-    
+            print(f"Best model name: {best_model_name}, Score: {best_model_score}")
 
-    except Exception as e:
-        raise CustomException(e,sys)
+            if best_model_score < 0.5:
+                raise Exception(
+                    "No best model found with an accuracy greater than the threshold 0.5"
+                )
+
+            logging.info(f"Best found model on both training and testing dataset")
+
+            os.makedirs(
+                os.path.dirname(self.model_trainer_config.trained_model_path),
+                exist_ok=True,
+            )
+
+            self.utils.save_object(
+                file_path=self.model_trainer_config.trained_model_path,
+                obj=best_model,
+            )
+
+            return self.model_trainer_config.trained_model_path
+
+        except Exception as e:
+            raise CustomException(e, sys)
