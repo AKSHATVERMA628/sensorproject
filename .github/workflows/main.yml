@@ -1,39 +1,39 @@
-name: workflow     # name of the workflow -> Github Actions 
+name: workflow
 
-on:       # when this workflow should trigger
+on:
   push:
     branches:
       - main
     paths-ignore:
-      - 'README.md'
+      - "README.md"
 
-permissions:    
+permissions:
   id-token: write
   contents: read
 
 jobs:
   integration:
-    name: Continuous integration
+    name: Continuous Integration
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Lint code 
+      - name: Lint code
         run: echo "Linting repository"
 
       - name: Run unit tests
         run: echo "Running unit tests"
 
   build-and-push-ecr-image:
-    name: Continuous Delivery - Build Image
+    name: Build and Push Docker Image
     needs: integration
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Install Utilities
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y jq unzip
@@ -42,13 +42,21 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Debug ECR URI
+        run: |
+          if [ -z "${{ secrets.AWS_ECR_REPO_URI }}" ]; then
+            echo "AWS_ECR_REPO_URI is empty"
+            exit 1
+          fi
+          echo "ECR URI found"
+
+      - name: Build and Push Docker Image
         env:
           IMAGE_TAG: latest
         run: |
@@ -56,6 +64,7 @@ jobs:
           docker push ${{ secrets.AWS_ECR_REPO_URI }}:$IMAGE_TAG
 
   Continuous-Deployment:
+    name: Deploy to EC2
     needs: build-and-push-ecr-image
     runs-on: self-hosted
     steps:
@@ -77,6 +86,6 @@ jobs:
           -e MONGO_DB_URL="${{ secrets.MONGO_DB_URL }}" \
           ${{ secrets.AWS_ECR_REPO_URI }}:latest
 
-      - name: Clean previous images and containers
+      - name: Clean previous images
         run: |
           docker system prune -f
