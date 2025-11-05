@@ -45,19 +45,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Export AWS Region
-        run: echo "AWS_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Debug ECR URI
-        run: |
-          if [ -z "${{ secrets.AWS_ECR_REPO_URI }}" ]; then
-            echo "AWS_ECR_REPO_URI is empty"
-            exit 1
-          fi
-          echo "ECR URI found"
 
       - name: Build and Push Docker Image
         env:
@@ -66,11 +55,18 @@ jobs:
           docker build -t ${{ secrets.AWS_ECR_REPO_URI }}:$IMAGE_TAG .
           docker push ${{ secrets.AWS_ECR_REPO_URI }}:$IMAGE_TAG
 
-  Continuous-Deployment:
+  deploy:
     name: Deploy to EC2
     needs: build-and-push-ecr-image
     runs-on: self-hosted
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
       - name: Export AWS Region
         run: echo "AWS_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
 
