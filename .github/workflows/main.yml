@@ -45,6 +45,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
+      - name: Export AWS Region
+        run: echo "AWS_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
+
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
@@ -68,6 +71,9 @@ jobs:
     needs: build-and-push-ecr-image
     runs-on: self-hosted
     steps:
+      - name: Export AWS Region
+        run: echo "AWS_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> $GITHUB_ENV
+
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
@@ -89,6 +95,3 @@ jobs:
       - name: Clean previous images
         run: |
           docker system prune -f
-
-
-#adsf
