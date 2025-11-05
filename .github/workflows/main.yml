@@ -1,4 +1,4 @@
-name: workflow
+name: CI-CD-Pipeline
 
 on:
   push:
@@ -13,20 +13,20 @@ permissions:
 
 jobs:
   integration:
-    name: Continuous Integration
+    name: Continuous Integration (Lint + Test)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Lint code
-        run: echo "Linting repository"
+        run: echo "Linting repository..."
 
       - name: Run unit tests
-        run: echo "Running unit tests"
+        run: echo "Running unit tests..."
 
   build-and-push-ecr-image:
-    name: Build and Push Docker Image
+    name: Continuous Delivery (Build & Push Image)
     needs: integration
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +56,7 @@ jobs:
           docker push ${{ secrets.AWS_ECR_REPO_URI }}:$IMAGE_TAG
 
   deploy:
-    name: Deploy to EC2
+    name: Continuous Deployment (Deploy to EC2)
     needs: build-and-push-ecr-image
     runs-on: self-hosted
     steps:
@@ -74,12 +74,10 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Pull latest image
-        run: |
-          docker pull ${{ secrets.AWS_ECR_REPO_URI }}:latest
+        run: docker pull ${{ secrets.AWS_ECR_REPO_URI }}:latest
 
       - name: Remove old container
-        run: |
-          docker rm -f sensor || true
+        run: docker rm -f sensor || true
 
       - name: Run Docker container
         run: |
@@ -89,5 +87,4 @@ jobs:
           ${{ secrets.AWS_ECR_REPO_URI }}:latest
 
       - name: Clean previous images
-        run: |
-          docker system prune -f
+        run: docker system prune -f
